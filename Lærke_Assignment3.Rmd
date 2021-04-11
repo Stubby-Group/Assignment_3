@@ -26,6 +26,52 @@ Step 1: Perform a meta-analysis of pitch variability from previous studies of vo
 - N.B. for the purpose of the assignment we're only interested in getting a meta-analytic effect size for the meta-analytic prior (and not e.g. all the stuff on publication bias). See a brms tutorial here: https://vuorre.netlify.com/post/2016/09/29/meta-analysis-is-a-special-case-of-bayesian-multilevel-modeling/ The formula is EffectSize | se(StandardError) ~ 1 + (1 | Paper). Don't forget prior definition, model checking, etc.
 - N.B. the livecoding video is not perfect, you *can* (but don't have to) improve it: use a t-student likelihood, test the effects of the priors and refine them, check the robustness of results to more or less skeptical priors, etc. 
 - Write down the results of the meta-analysis in terms of a prior for step 2.
+```{r Step 1.1 - First look at the data}
+pacman::p_load(readr, tidyverse, metafor)
+
+#Loading the data:
+ma_d <- read_delim("Ass3_MetaAnalysisData.tsv", "\t")
+
+#Correcting the difference in classes of some of the columns (some columns see some values as characters and some as numeric):
+ma_d <- ma_d %>%
+  mutate(
+    PitchVariabilityASD_Mean = as.numeric(PitchVariabilityASD_Mean),
+    PitchVariabilityTD_Mean = as.numeric(PitchVariabilityTD_Mean),
+    PitchVariabilityASD_SD = as.numeric(PitchVariabilityASD_SD),
+    PitchVariabilityTD_SD = as.numeric(PitchVariabilityTD_SD)
+  )
+# We don't care about the fact that many of these columns use different units, because we are going to calculate effect sizes within study (within each row).
+
+colnames(ma_d)
+
+```
+
+```{r Step 1.2 - Calculating effect size and SE}
+# Calculating effect sizes:
+ma_d <- ma_d %>% subset(!is.na(Paper)) #Making sure that our data set only contains rows in which there is a paper (as opposed to NAs).
+
+ma_d <- escalc(measure = "SMD", #which kind of effect size we are looking for? We want SMD (standardized mean difference).
+               n1i = TD_N,
+               n2i = ASD_N, #How many participants are in each group.
+               m1i = PitchVariabilityTD_Mean,
+               m2i = PitchVariabilityASD_Mean, #The mean of the variable that we want to calculate an effect size for, in both groups.
+               sd1i = PitchVariabilityTD_SD,
+               sd2i = PitchVariabilityASD_SD, #Standard deviations.
+               data = ma_d,
+               slab = Paper) #In case we want to make a plot, what should be on the name of the plot.
+
+colnames(ma_d) #escalc should have added some columns at the end. yi = effects size, and vi = the variance of the effect size.
+
+# The variance is the sqare of the sd, so if the want to calculate the standard error (a measure of uncertainty, and of the heterogeneity internal to the effects within that study), then:
+ma_d <- ma_d %>%
+  mutate(
+    StandardError = sqrt(vi)
+  ) %>% rename(
+    EffectSize = yi
+  )
+
+```
+
 
 Step 2: Analyse pitch variability in ASD in two new studies for which you have access to all the trials (not just study level estimates)
 - the data is available as Ass3_data.csv. Notice there are 2 studies (language us, and language dk), multiple trials per participant, and a few different ways to measure pitch variability (if in doubt, focus on pitch IQR, interquartile range of the log of fundamental frequency)
@@ -34,7 +80,7 @@ Step 2: Analyse pitch variability in ASD in two new studies for which you have a
 
 Step 3: Build a regression model predicting Pitch variability from Diagnosis.
 - how is the outcome distributed? (likelihood function). NB. given we are standardizing, and the meta-analysis is on that scale, gaussian is not a bad assumption, but check t-student as well. Lognormal would require us to convert the prior to that scale.
-- how are the parameters of the likelihood distribution distributed? Which predictors should they be conditioned on? Start simple, with Diagnosis only. Add other predictors only if you have the time and energy!
+- (discuss:) how are the parameters of the likelihood distribution distributed (e.g. a gaussian will have a mean and a sigma)? Which predictors should they be conditioned on (in which ways is the mean effected by predictors)? Start simple, with Diagnosis only. Add other predictors only if you have the time and energy!
 - use a skeptical/conservative prior for the effects of diagnosis. Remember you'll need to motivate it, test its predictions (prior predictive checks), its impact on the posteriors (prior posterior updates checks).
 - Evaluate model quality. Describe and plot the estimates. 
 
