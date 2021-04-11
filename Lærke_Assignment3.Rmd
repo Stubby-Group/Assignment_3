@@ -27,7 +27,10 @@ Step 1: Perform a meta-analysis of pitch variability from previous studies of vo
 - N.B. the livecoding video is not perfect, you *can* (but don't have to) improve it: use a t-student likelihood, test the effects of the priors and refine them, check the robustness of results to more or less skeptical priors, etc. 
 - Write down the results of the meta-analysis in terms of a prior for step 2.
 ```{r Step 1.1 - First look at the data}
-pacman::p_load(readr, tidyverse, metafor)
+pacman::p_load(readr, 
+               tidyverse, 
+               metafor, 
+               brms)
 
 #Loading the data:
 ma_d <- read_delim("Ass3_MetaAnalysisData.tsv", "\t")
@@ -42,7 +45,7 @@ ma_d <- ma_d %>%
   )
 # We don't care about the fact that many of these columns use different units, because we are going to calculate effect sizes within study (within each row).
 
-colnames(ma_d)
+# colnames(ma_d)
 
 ```
 
@@ -60,7 +63,7 @@ ma_d <- escalc(measure = "SMD", #which kind of effect size we are looking for? W
                data = ma_d,
                slab = Paper) #In case we want to make a plot, what should be on the name of the plot.
 
-colnames(ma_d) #escalc should have added some columns at the end. yi = effects size, and vi = the variance of the effect size.
+# colnames(ma_d) #escalc should have added some columns at the end. yi = effects size, and vi = the variance of the effect size.
 
 # The variance is the sqare of the sd, so if the want to calculate the standard error (a measure of uncertainty, and of the heterogeneity internal to the effects within that study), then:
 ma_d <- ma_d %>%
@@ -70,6 +73,62 @@ ma_d <- ma_d %>%
     EffectSize = yi
   )
 
+summary(ma_d$EffectSize)
+summary(ma_d$StandardError)
+```
+
+
+```{r Step 1.3 - Running the analysis}
+# The bigger the uncertainty, the smaller the weight we should put on a given study, etc. (go and read the tutorial).
+
+#Writing a meta analytic formula:
+ma_f <- bf(EffectSize | se(StandardError) ~ 1 + (1 | Population)) #The effect size with a given uncertainty is conditioned on the intercept, and we have varying effects of our populations (some different papers are run on the same population).
+
+#Identifying the priors:
+get_prior(ma_f, data = ma_d, family = gaussian()) #We have an intercept, a generic sd for the population, and in particular an sd for the population of *muttering* of the intercept (???).
+
+ma_prior <- c(
+  prior(normal(0, 1), class = Intercept), #What is my prior for the meta analytical effect size? we are here skeptical using a mean of 0. Now, how uncertain are we of the mean being zero - how skeptical are we? (that is the sd, i suppose?). This is probs crap - it leads us to expect effect sizes of -2 and 2 which is quite high (I think).
+  prior(normal(0, .3), class = sd) #check sd(ma_d$EffectSize, na.rm=T). This gives us spprox 0.5. We want our prior to capture that possible variance, but sort of shrink the varying effects. We want to make sure that for any given study it doesn't just take the effect sizes at face value. Instead we want it to say that if it is very different from the mean of the other studies, then we shrink it. Choosing 0.3 says that variabilities of up to 0.6 (two sd's from the mean) are quite likely, but we expect them to be less likely than a smaller variability, because we are going to shrink participants that are too far on that axis.
+)
+
+ma_m0 <- brm(
+  ma_f,
+  data = ma_d,
+  family = gaussian(),
+  prior = ma_prior,
+  sample_prior = "only", #We don't look at the data yet
+  chains = 2,
+  cores = 2 #We run each of these chains on a separate core so that they can run in parallel.
+)  #I get something that Riccardo does not: "Rows containing NAs were excluded from the model.Compiling Stan program... recompiling to avoid crashing R session". it never says "compiling C++ model" like Riccardo's does...
+
+#Prior predictive check
+pp_check(ma_m0, nsamples = 100) #This is not too bad. It goes from -2 to 2, and the data is also kinda going all the way there, so we will accept it.
+
+#Building our actual model:
+ma_m1 <- brm(
+  ma_f,
+  data = ma_d,
+  family = gaussian,
+  prior = ma_prior,
+  sample_prior = T,
+  chains = 2,
+  cores = 2
+)
+
+pp_check(ma_m1, nsamples = 100) # It is decent, though there is a bimodal (is that what he said?) structure that we are not capturing - probably because we are not considering i.e. age, type of autism, etc., but it is good enough for our purpose.
+
+summary(ma_m1) #We are interested in the population-level effect. The estimate is -0.4, the estimated error is 0.1, (and so on...). (Q: why are my numbers slightly different from Riccardo's?) 
+# so:
+# Meta analysis effect mean = 0.44, sd = 0.09
+
+fixef(ma_m1)
+ma_mean <- fixef(ma_m1)[[1]] 
+ma_se <- fixef(ma_m1)[[2]] 
+
+# We also see from the summary(ma_m1) (which we see under the group-level effects) that therer is expected heterogeneity between populations of 0.32. We expect that any given study will deviate from that population effect of (?) 0.32
+
+ma_heterogeneity <- 0.32
 ```
 
 
