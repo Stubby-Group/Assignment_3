@@ -139,13 +139,6 @@ Step 2: Analyse pitch variability in ASD in two new studies for which you have a
 ```{r}
 new_d <- read.csv("Ass3_data.csv")
 
-#new_d <- new_d %>%
-#  mutate(
-#    Pitch_IQR_mean = mean(Pitch_IQR),
-#    Pitch_IQR_SD = sd(Pitch_IQR)
-#  )
-
-
 new_d$std_Pitch_IQR <- scale(new_d$Pitch_IQR)
 
 #Writing a meta analytic formula:
@@ -160,7 +153,7 @@ new_prior <- c(
   prior(normal(0, 1), class = Intercept), #center at overall population mean = 0
   prior(normal(0, 0.1), class = b), #Sceptical prior. 0: we expect no difference. sd=3 would not be skeptical. Needs to be smaller than 0.4-0-6. 0.2 is still pretty big.
   prior(normal(0, 0.05), class = sd), #skeptical again. small sd of the sd.
-  prior(normal(0, ), class = sigma)
+  prior(normal(1, 0.5), class = sigma) #This I wrote at random
 )
 
 new_m0 <- brm(
