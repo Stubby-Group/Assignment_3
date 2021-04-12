@@ -88,7 +88,7 @@ get_prior(ma_f, data = ma_d, family = gaussian()) #We have an intercept, a gener
 
 ma_prior <- c(
   prior(normal(0, 1), class = Intercept), #What is my prior for the meta analytical effect size? we are here skeptical using a mean of 0. Now, how uncertain are we of the mean being zero - how skeptical are we? (that is the sd, i suppose?). This is probs crap - it leads us to expect effect sizes of -2 and 2 which is quite high (I think).
-  prior(normal(0, .3), class = sd) #check sd(ma_d$EffectSize, na.rm=T). This gives us spprox 0.5. We want our prior to capture that possible variance, but sort of shrink the varying effects. We want to make sure that for any given study it doesn't just take the effect sizes at face value. Instead we want it to say that if it is very different from the mean of the other studies, then we shrink it. Choosing 0.3 says that variabilities of up to 0.6 (two sd's from the mean) are quite likely, but we expect them to be less likely than a smaller variability, because we are going to shrink participants that are too far on that axis.
+  prior(normal(0, .3), class = sd) #check sd(ma_d$EffectSize, na.rm=T). This gives us approx 0.5. We want our prior to capture that possible variance, but sort of shrink the varying effects. We want to make sure that for any given study it doesn't just take the effect sizes at face value. Instead we want it to say that if it is very different from the mean of the other studies, then we shrink it. Choosing 0.3 says that variabilities of up to 0.6 (two sd's from the mean) are quite likely, but we expect them to be less likely than a smaller variability, because we are going to shrink participants that are too far on that axis.
 )
 
 ma_m0 <- brm(
@@ -117,9 +117,9 @@ ma_m1 <- brm(
 
 pp_check(ma_m1, nsamples = 100) # It is decent, though there is a bimodal (is that what he said?) structure that we are not capturing - probably because we are not considering i.e. age, type of autism, etc., but it is good enough for our purpose.
 
-summary(ma_m1) #We are interested in the population-level effect. The estimate is -0.4, the estimated error is 0.1, (and so on...). (Q: why are my numbers slightly different from Riccardo's?) 
+summary(ma_m1) #We are interested in the population-level effect. The estimate is -0.4, the estimated error is 0.1, (and so on...).
 # so:
-# Meta analysis effect mean = 0.44, sd = 0.09
+# Meta analysis effect mean = 0.44, sd (se?) = 0.09
 
 fixef(ma_m1)
 ma_mean <- fixef(ma_m1)[[1]] 
@@ -128,6 +128,7 @@ ma_se <- fixef(ma_m1)[[2]]
 # We also see from the summary(ma_m1) (which we see under the group-level effects) that therer is expected heterogeneity between populations of 0.32. We expect that any given study will deviate from that population effect of (?) 0.32
 
 ma_heterogeneity <- 0.32
+
 ```
 
 
@@ -137,6 +138,64 @@ Step 2: Analyse pitch variability in ASD in two new studies for which you have a
 - Is there any structure in the dataset that we should account for with random/varying effects? How would you implement that? Or, if you don't know how to do bayesian random/varying effects or don't want to bother, is there anything we would need to simplify in the dataset?
 ```{r}
 new_d <- read.csv("Ass3_data.csv")
+
+#new_d <- new_d %>%
+#  mutate(
+#    Pitch_IQR_mean = mean(Pitch_IQR),
+#    Pitch_IQR_SD = sd(Pitch_IQR)
+#  )
+
+
+new_d$std_Pitch_IQR <- scale(new_d$Pitch_IQR)
+
+#Writing a meta analytic formula:
+#new_f <- bf(Pitch_IQR |  ~ 1 + (1 | ID))
+new_f <- bf(std_Pitch_IQR ~ 1 + Diagnosis + (1 | ID)) #What about uncertainty? And where do we standardize?
+
+
+#Identifying the priors:
+get_prior(new_f, data = new_d, family = gaussian())
+
+new_prior <- c(
+  prior(normal(0, 1), class = Intercept), #center at overall population mean = 0
+  prior(normal(0, 0.1), class = b), #Sceptical prior. 0: we expect no difference. sd=3 would not be skeptical. Needs to be smaller than 0.4-0-6. 0.2 is still pretty big.
+  prior(normal(0, 0.05), class = sd), #skeptical again. small sd of the sd.
+  prior(normal(0, ), class = sigma)
+)
+
+new_m0 <- brm(
+  new_f,
+  data = new_d,
+  family = gaussian(),
+  prior = new_prior,
+  sample_prior = "only", 
+  chains = 2,
+  cores = 2 
+)
+
+#Prior predictive check
+pp_check(new_m0, nsamples = 100)
+
+#Building our actual model:
+new_m1 <- brm(
+  new_f,
+  data = new_d,
+  family = gaussian,
+  prior = new_prior,
+  sample_prior = T,
+  chains = 2,
+  cores = 2
+)
+
+pp_check(new_m1, nsamples = 100)
+
+summary(new_m1)
+
+fixef(new_m1)
+new_mean <- fixef(new_m1)[[1]] 
+new_se <- fixef(new_m1)[[2]] 
+
+new_heterogeneity <- ??
 
 ```
 
