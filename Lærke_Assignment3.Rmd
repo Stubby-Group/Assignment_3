@@ -141,6 +141,13 @@ new_d <- read.csv("Ass3_data.csv")
 
 new_d$std_Pitch_IQR <- scale(new_d$Pitch_IQR)
 
+
+
+#### visualizations of raw data - explore
+
+
+
+
 #Writing a meta analytic formula:
 #new_f <- bf(Pitch_IQR |  ~ 1 + (1 | ID))
 new_f <- bf(std_Pitch_IQR ~ 1 + Diagnosis + (1 | ID)) #What about uncertainty? And where do we standardize?
@@ -149,11 +156,12 @@ new_f <- bf(std_Pitch_IQR ~ 1 + Diagnosis + (1 | ID)) #What about uncertainty? A
 #Identifying the priors:
 get_prior(new_f, data = new_d, family = gaussian())
 
+
 new_prior <- c(
   prior(normal(0, 1), class = Intercept), #center at overall population mean = 0
   prior(normal(0, 0.1), class = b), #Sceptical prior. 0: we expect no difference. sd=3 would not be skeptical. Needs to be smaller than 0.4-0-6. 0.2 is still pretty big.
   prior(normal(0, 0.05), class = sd), #skeptical again. small sd of the sd.
-  prior(normal(1, 0.5), class = sigma) #This I wrote at random
+  prior(normal(1, 0.5), class = sigma) #have 0 as mean? half normal - greatest value on small variabilities. This I wrote at random. sigma = diff between studies. stan prior recommendations.
 )
 
 new_m0 <- brm(
@@ -180,7 +188,20 @@ new_m1 <- brm(
   cores = 2
 )
 
-pp_check(new_m1, nsamples = 100)
+pp_check(new_m1, nsamples = 100) #Peak and longer tails - gaussian is problematic - run a students t test
+
+post <- posterior_samples(new_m1)
+ggplot(post) + 
+  geom_density(aes(prior_Intercept), fill = "red", alpha = 0.5)  +
+  geom_density(aes(b_Intercept), fill = "blue", alpha = 0.5)
+ggplot(post) + 
+  geom_density(aes(prior_b), fill = "red", alpha = 0.5)  +
+  geom_density(aes(b_DiagnosisTD), fill = "blue", alpha = 0.5)
+
+colnames(post)
+
+plot(hypothesis(new_m1, "DiagnosisTD>0")) #post learned from prior - prob mass under zero
+
 
 summary(new_m1)
 
@@ -199,9 +220,117 @@ Step 3: Build a regression model predicting Pitch variability from Diagnosis.
 - use a skeptical/conservative prior for the effects of diagnosis. Remember you'll need to motivate it, test its predictions (prior predictive checks), its impact on the posteriors (prior posterior updates checks).
 - Evaluate model quality. Describe and plot the estimates. 
 
+```{r}
+get_prior(new_f, data = new_d, family = student())
+
+new_prior2 <- c(
+  prior(normal(0, 1), class = Intercept), #center at overall population mean = 0
+  prior(normal(0, 0.1), class = b), #Sceptical prior. 0: we expect no difference. sd=3 would not be skeptical. Needs to be smaller than 0.4-0-6. 0.2 is still pretty big.
+  prior(normal(0, 0.05), class = sd), #skeptical again. small sd of the sd.
+  prior(normal(1, 0.5), class = sigma), #have 0 as mean? half normal - greatest value on small variabilities. This I wrote at random. sigma = diff between studies. stan prior recommendations.
+  prior(normal(2, 0.1), class = nu)
+)
+
+new_m02 <- brm(
+  new_f,
+  data = new_d,
+  family = student(),
+  prior = new_prior2,
+  sample_prior = "only", 
+  chains = 2,
+  cores = 2 
+)
+
+#Prior predictive check
+pp_check(new_m02, nsamples = 100)
+
+#Building our actual model:
+new_m2 <- brm(
+  new_f,
+  data = new_d,
+  family = student,
+  prior = new_prior2,
+  sample_prior = T,
+  chains = 2,
+  cores = 2
+)
+
+pp_check(new_m2, nsamples = 100) #Peak and longer tails - gaussian is problematic - run a students t test
+
+post <- posterior_samples(new_m2)
+ggplot(post) + 
+  geom_density(aes(prior_Intercept), fill = "red", alpha = 0.5)  +
+  geom_density(aes(b_Intercept), fill = "blue", alpha = 0.5)
+ggplot(post) + 
+  geom_density(aes(prior_b), fill = "red", alpha = 0.5)  +
+  geom_density(aes(b_DiagnosisTD), fill = "blue", alpha = 0.5)
+
+colnames(post)
+
+plot(hypothesis(new_m2, "DiagnosisTD>0")) #post learned from prior - prob mass under zero
+
+
+summary(new_m2)
+```
+
+
 Step 4: Now re-run the model with the meta-analytic prior
 - Evaluate model quality. Describe and plot the estimates. 
 - N.B. you need to assess the meta-analytic informed prior (prior pred checks, prior-posterior update checks) and if relevant you can always change it in motivated ways (e.g. too confident, doesn't let the model actually learn from the data, so increase sd)
+```{r}
+ma_mean
+ma_se
+
+new_prior_ma <- c(
+  prior(normal(0, 1), class = Intercept),
+  prior(normal(-0.4329828, 0.1), class = b), 
+  prior(normal(0.09012945, 0.05), class = sd),
+  prior(normal(1, 0.5), class = sigma)
+)
+
+new_m0_ma <- brm(
+  new_f,
+  data = new_d,
+  family = gaussian(),
+  prior = new_prior_ma,
+  sample_prior = "only", 
+  chains = 2,
+  cores = 2 
+)
+
+#Prior predictive check
+pp_check(new_m0_ma, nsamples = 100)
+
+#Building our actual model:
+new_m1_ma <- brm(
+  new_f,
+  data = new_d,
+  family = gaussian,
+  prior = new_prior_ma,
+  sample_prior = T,
+  chains = 2,
+  cores = 2
+)
+
+pp_check(new_m1_ma, nsamples = 100) #Peak and longer tails - gaussian is problematic - run a students t test
+
+post <- posterior_samples(new_m1_ma)
+ggplot(post) + 
+  geom_density(aes(prior_Intercept), fill = "red", alpha = 0.5)  +
+  geom_density(aes(b_Intercept), fill = "blue", alpha = 0.5)
+ggplot(post) + 
+  geom_density(aes(prior_b), fill = "red", alpha = 0.5)  +
+  geom_density(aes(b_DiagnosisTD), fill = "blue", alpha = 0.5)
+
+colnames(post)
+
+plot(hypothesis(new_m1_ma, "DiagnosisTD>0")) #post learned from prior - prob mass under zero
+
+
+summary(new_m1_ma)
+```
+
+
 
 Step 5: Compare the models
 - Plot priors and posteriors of the diagnosis effect in both models
