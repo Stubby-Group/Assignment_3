@@ -26,15 +26,124 @@ Step 1: Perform a meta-analysis of pitch variability from previous studies of vo
 - N.B. for the purpose of the assignment we're only interested in getting a meta-analytic effect size for the meta-analytic prior (and not e.g. all the stuff on publication bias). See a brms tutorial here: https://vuorre.netlify.com/post/2016/09/29/meta-analysis-is-a-special-case-of-bayesian-multilevel-modeling/ The formula is EffectSize | se(StandardError) ~ 1 + (1 | Paper). Don't forget prior definition, model checking, etc.
 - N.B. the livecoding video is not perfect, you *can* (but don't have to) improve it: use a t-student likelihood, test the effects of the priors and refine them, check the robustness of results to more or less skeptical priors, etc. 
 - Write down the results of the meta-analysis in terms of a prior for step 2.
+```{r Step 1.1 - First look at the data}
+pacman::p_load(readr, 
+               tidyverse, 
+               metafor, 
+               brms)
+
+#Loading the data:
+ma_d <- read_delim("Ass3_MetaAnalysisData.tsv", "\t")
+
+#Correcting the difference in classes of some of the columns (some columns see some values as characters and some as numeric):
+ma_d <- ma_d %>%
+  mutate(
+    PitchVariabilityASD_Mean = as.numeric(PitchVariabilityASD_Mean),
+    PitchVariabilityTD_Mean = as.numeric(PitchVariabilityTD_Mean),
+    PitchVariabilityASD_SD = as.numeric(PitchVariabilityASD_SD),
+    PitchVariabilityTD_SD = as.numeric(PitchVariabilityTD_SD)
+  )
+# We don't care about the fact that many of these columns use different units, because we are going to calculate effect sizes within study (within each row).
+
+# colnames(ma_d)
+
+```
+
+```{r Step 1.2 - Calculating effect size and SE}
+# Calculating effect sizes:
+ma_d <- ma_d %>% subset(!is.na(Paper)) #Making sure that our data set only contains rows in which there is a paper (as opposed to NAs).
+
+ma_d <- escalc(measure = "SMD", #which kind of effect size we are looking for? We want SMD (standardized mean difference).
+               n1i = TD_N,
+               n2i = ASD_N, #How many participants are in each group.
+               m1i = PitchVariabilityTD_Mean,
+               m2i = PitchVariabilityASD_Mean, #The mean of the variable that we want to calculate an effect size for, in both groups.
+               sd1i = PitchVariabilityTD_SD,
+               sd2i = PitchVariabilityASD_SD, #Standard deviations.
+               data = ma_d,
+               slab = Paper) #In case we want to make a plot, what should be on the name of the plot.
+
+# colnames(ma_d) #escalc should have added some columns at the end. yi = effects size, and vi = the variance of the effect size.
+
+# The variance is the sqare of the sd, so if the want to calculate the standard error (a measure of uncertainty, and of the heterogeneity internal to the effects within that study), then:
+ma_d <- ma_d %>%
+  mutate(
+    StandardError = sqrt(vi)
+  ) %>% rename(
+    EffectSize = yi
+  )
+
+summary(ma_d$EffectSize)
+summary(ma_d$StandardError)
+```
+
+```{r Step 1.3 - Running the analysis}
+# The bigger the uncertainty, the smaller the weight we should put on a given study, etc. (go and read the tutorial).
+
+#Writing a meta analytic formula:
+ma_f <- bf(EffectSize | se(StandardError) ~ 1 + (1 | Population)) #The effect size with a given uncertainty is conditioned on the intercept, and we have varying effects of our populations (some different papers are run on the same population).
+
+#Identifying the priors:
+get_prior(ma_f, data = ma_d, family = gaussian()) #We have an intercept, a generic sd for the population, and in particular an sd for the population of *muttering* of the intercept (???).
+
+ma_prior <- c(
+  prior(normal(0, 1), class = Intercept), #What is my prior for the meta analytical effect size? we are here skeptical using a mean of 0. Now, how uncertain are we of the mean being zero - how skeptical are we? (that is the sd, i suppose?). This is probs crap - it leads us to expect effect sizes of -2 and 2 which is quite high (I think).
+  prior(normal(0, .3), class = sd) #check sd(ma_d$EffectSize, na.rm=T). This gives us spprox 0.5. We want our prior to capture that possible variance, but sort of shrink the varying effects. We want to make sure that for any given study it doesn't just take the effect sizes at face value. Instead we want it to say that if it is very different from the mean of the other studies, then we shrink it. Choosing 0.3 says that variabilities of up to 0.6 (two sd's from the mean) are quite likely, but we expect them to be less likely than a smaller variability, because we are going to shrink participants that are too far on that axis.
+)
+
+ma_m0 <- brm(
+  ma_f,
+  data = ma_d,
+  family = gaussian(),
+  prior = ma_prior,
+  sample_prior = "only", #We don't look at the data yet
+  chains = 2,
+  cores = 2 #We run each of these chains on a separate core so that they can run in parallel.
+)  #I get something that Riccardo does not: "Rows containing NAs were excluded from the model.Compiling Stan program... recompiling to avoid crashing R session". it never says "compiling C++ model" like Riccardo's does...
+
+#Prior predictive check
+pp_check(ma_m0, nsamples = 100) #This is not too bad. It goes from -2 to 2, and the data is also kinda going all the way there, so we will accept it.
+
+#Building our actual model:
+ma_m1 <- brm(
+  ma_f,
+  data = ma_d,
+  family = gaussian,
+  prior = ma_prior,
+  sample_prior = T,
+  chains = 2,
+  cores = 2
+)
+
+pp_check(ma_m1, nsamples = 100) # It is decent, though there is a bimodal (is that what he said?) structure that we are not capturing - probably because we are not considering i.e. age, type of autism, etc., but it is good enough for our purpose.
+
+summary(ma_m1) #We are interested in the population-level effect. The estimate is -0.4, the estimated error is 0.1, (and so on...). (Q: why are my numbers slightly different from Riccardo's?) 
+# so:
+# Meta analysis effect mean = 0.44, sd = 0.09
+
+fixef(ma_m1)
+ma_mean <- fixef(ma_m1)[[1]] 
+ma_se <- fixef(ma_m1)[[2]] 
+
+# We also see from the summary(ma_m1) (which we see under the group-level effects) that therer is expected heterogeneity between populations of 0.32. We expect that any given study will deviate from that population effect of (?) 0.32
+
+ma_heterogeneity <- 0.32
+```
+
 
 Step 2: Analyse pitch variability in ASD in two new studies for which you have access to all the trials (not just study level estimates)
 - the data is available as Ass3_data.csv. Notice there are 2 studies (language us, and language dk), multiple trials per participant, and a few different ways to measure pitch variability (if in doubt, focus on pitch IQR, interquartile range of the log of fundamental frequency)
 - Also, let's standardize the data, so that they are compatible with our meta-analytic prior (Cohen's d is measured in SDs).
 - Is there any structure in the dataset that we should account for with random/varying effects? How would you implement that? Or, if you don't know how to do bayesian random/varying effects or don't want to bother, is there anything we would need to simplify in the dataset?
+```{r}
+new_d <- read.csv("Ass3_data.csv")
+
+```
+
 
 Step 3: Build a regression model predicting Pitch variability from Diagnosis.
 - how is the outcome distributed? (likelihood function). NB. given we are standardizing, and the meta-analysis is on that scale, gaussian is not a bad assumption, but check t-student as well. Lognormal would require us to convert the prior to that scale.
-- how are the parameters of the likelihood distribution distributed? Which predictors should they be conditioned on? Start simple, with Diagnosis only. Add other predictors only if you have the time and energy!
+- (discuss:) how are the parameters of the likelihood distribution distributed (e.g. a gaussian will have a mean and a sigma)? Which predictors should they be conditioned on (in which ways is the mean effected by predictors)? Start simple, with Diagnosis only. Add other predictors only if you have the time and energy!
 - use a skeptical/conservative prior for the effects of diagnosis. Remember you'll need to motivate it, test its predictions (prior predictive checks), its impact on the posteriors (prior posterior updates checks).
 - Evaluate model quality. Describe and plot the estimates. 
 
