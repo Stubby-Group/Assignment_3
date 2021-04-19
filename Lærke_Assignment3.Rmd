@@ -316,18 +316,71 @@ pp_check(new_m1_ma, nsamples = 100) #Peak and longer tails - gaussian is problem
 
 post <- posterior_samples(new_m1_ma)
 ggplot(post) + 
-  geom_density(aes(prior_Intercept), fill = "red", alpha = 0.5)  +
-  geom_density(aes(b_Intercept), fill = "blue", alpha = 0.5)
+  geom_density(aes(prior_b), fill = "red", alpha = 0.5)  +
+  geom_density(aes(b_DiagnosisTD), fill = "blue", alpha = 0.5)
+
+colnames(post)
+
+plot(hypothesis(new_m1, "DiagnosisTD>0"))
+plot(hypothesis(new_m1_ma, "DiagnosisTD>0")) #post learned from prior - prob mass under zero
+
+
+summary(new_m1_ma)
+
+
+
+
+
+
+
+
+# Students
+new_prior2_ma <- c(
+  prior(normal(0, 1), class = Intercept),
+  prior(normal(-0.4329828, 0.1), class = b), 
+  prior(normal(0.09012945, 0.05), class = sd),
+  prior(normal(1, 0.5), class = sigma),
+  prior(normal(2, 0.1), class = nu)
+)
+
+new_m02_ma <- brm(
+  new_f,
+  data = new_d,
+  family = student(),
+  prior = new_prior2_ma,
+  sample_prior = "only", 
+  chains = 2,
+  cores = 2 
+)
+
+#Prior predictive check
+pp_check(new_m02_ma, nsamples = 100)
+
+#Building our actual model:
+new_m2_ma <- brm(
+  new_f,
+  data = new_d,
+  family = student(),
+  prior = new_prior2_ma,
+  sample_prior = T,
+  chains = 2,
+  cores = 2
+)
+
+pp_check(new_m2_ma, nsamples = 100) #Peak and longer tails - gaussian is problematic - run a students t test
+
+post <- posterior_samples(new_m2_ma)
 ggplot(post) + 
   geom_density(aes(prior_b), fill = "red", alpha = 0.5)  +
   geom_density(aes(b_DiagnosisTD), fill = "blue", alpha = 0.5)
 
 colnames(post)
 
-plot(hypothesis(new_m1_ma, "DiagnosisTD>0")) #post learned from prior - prob mass under zero
+plot(hypothesis(new_m2, "DiagnosisTD>0"))
+plot(hypothesis(new_m2_ma, "DiagnosisTD>0"))
 
 
-summary(new_m1_ma)
+summary(new_m2_ma)
 ```
 
 
@@ -337,6 +390,20 @@ Step 5: Compare the models
 - Compare posteriors between the two models
 - Compare the two models (LOO)
 - Discuss how they compare and whether any of them is best.
+```{r}
+#Gaussian
+plot(hypothesis(new_m1, "DiagnosisTD>0"))
+plot(hypothesis(new_m1_ma, "DiagnosisTD>0"))
+
+#Students t
+plot(hypothesis(new_m2, "DiagnosisTD>0"))
+plot(hypothesis(new_m2_ma, "DiagnosisTD>0"))
+
+
+```
+
+
+
 
 Step 6: Prepare a nice write up of the analysis and answer the questions at the top.
 
