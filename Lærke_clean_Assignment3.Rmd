@@ -212,8 +212,8 @@ new_m_prior2 <- brm(
 )
 
 #Prior predictive check
-pp_check(new_m_prior, nsamples = 100)
-pp_check(new_m_prior2, nsamples = 100)
+pp_check(new_m_prior, nsamples = 10)
+pp_check(new_m_prior2, nsamples = 10)
 ```
 
 ```{r Step 3.4 - Fitting the model}
@@ -337,7 +337,7 @@ plot(hypothesis(new_m2_ma, "DiagnosisTD>0"))
 ```{r Step 5.2 - Comparing the posteriors between the two models}
 pacman::p_load(loo)
 
-log_lik1 <- extract_log_lik(new_m1)
+#log_lik1 <- extract_log_lik(new_m1)
 
 loo1 <- loo(new_m1)
 loo2 <- loo(new_m1_ma)
