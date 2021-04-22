@@ -349,27 +349,18 @@ post$b_DiagnosisTD_strict <- post$b_DiagnosisTD
 post2$b_DiagnosisTD_ma <- post2$b_DiagnosisTD
 
 ggplot(post) + 
-  geom_density(aes(V1), fill = "red", alpha = 0.5)  +
+  geom_density(aes(V1), fill = "green", alpha = 0.5)  +
   geom_density(aes(V2), fill = "blue", alpha = 0.5) + 
-  
+  xlab("Beta posterior")
 ```
 
 ```{r Step 5.3 - Comparing the two models (LOO)}
 
 
-#log_lik1 <- extract_log_lik(new_m1)
-
-loo1 <- loo(new_m1)
-loo2 <- loo(new_m1_ma)
-loo3 <- loo(new_m2)
-loo4 <- loo(new_m2_ma)
+loo_m1 <- loo(new_m1)
+loo_m1_ma <- loo(new_m1_ma)
 
 
-print(loo_compare(loo1, loo2), digits = 3) #lepd: Difference in expected predictive accuracy. This test expects the model with the strict priors to have worse predicted accuracy than the model with the meta analysis priors.
-
-loo_model_weights(new_m1, new_m1_ma)
-
-print(loo_compare(loo1, loo2, loo3, loo4), digits = 3)
-
+print(loo_compare(loo_m1, loo_m1_ma), digits = 3) #lepd: Difference in expected predictive accuracy. This test expects the model with the strict priors to have worse predicted accuracy than the model with the meta analysis priors.
 
 ```
