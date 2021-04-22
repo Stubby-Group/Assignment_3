@@ -159,7 +159,7 @@ get_prior(new_f, data = new_d, family = student())
 new_prior <- c(
   prior(normal(0, 1), class = Intercept),
   prior(normal(0, 0.1), class = b),
-  prior(normal(0, 0.5), class = sd),
+  prior(normal(0, 0.05), class = sd),
   prior(normal(1, 0.5), class = sigma),
   prior(normal(2, 0.1), class = nu)
 )
@@ -203,6 +203,7 @@ summary(new_m1)
 ```{r Step 3.6 - Checking the chains}
 plot(new_m1, N=1)
 
+
 ```
 
 ```{r Step 3.6 - Checking the predictions}
@@ -210,11 +211,6 @@ pp_check(new_m1, nsamples = 25)
 pp_check(new_m1, nsamples = 40)
 pp_check(new_m1, nsamples = 100)
 
-
-# Trace plots:
-color_scheme_set("viridis")
-mcmc_trace(new_m1) + theme_classic()
-mcmc_rank_overlay(new_m1) + theme_classic()
 
 #Have the posteriors moved or gotten more confident than the priors?
 plot(hypothesis(new_m1, "Intercept > 0"))
@@ -238,7 +234,7 @@ ggplot(post) +
 pacman::p_load(loo)
 loo(new_m1)
 plot(loo(new_m1))
-# We don't have any data points over the 0.7 Pareto k threshold, which is great, we only have 3 that are close, which is ok.
+# We don't have any data points over the 0.7 Pareto k threshold, which is great, we only have 5 that are close, which is ok.
 ```
 
 
@@ -259,7 +255,7 @@ Step 4: Now re-run the model with the meta-analytic prior
 new_prior_ma <- c(
   prior(normal(0, 1), class = Intercept),
   prior(normal(-0.4329828, 0.09012945), class = b),
-  prior(normal(0.32, 0.8), class = sd), # Using the heterogeneity prior, but making it broader, since we are analyzing heterogeneity between participants and we might expect it to be bigger, or in any case different (we are describing a different level of the structure).
+  prior(normal(0.32, 0.16), class = sd), # Using the heterogeneity prior, but making it broader, since we are analyzing heterogeneity between participants and we might expect it to be bigger, or in any case different (we are describing a different level of the structure).
   prior(normal(1, 0.5), class = sigma),
   prior(normal(2, 0.1), class = nu)
 )
@@ -305,7 +301,7 @@ summary(new_m1_ma)
 ```
 
 ```{r Step 4.6 - Checking the chains}
-plot(new_m1, N=1)
+plot(new_m1_ma, N=1)
 ```
 
 ```{r Step 4.6 - Checking the predictions}
@@ -326,7 +322,7 @@ ggplot(post2) +
 
 loo(new_m1_ma)
 plot(loo(new_m1_ma))
-# we don't have any other bad points for this model either! only 2 that are 'ok' while the rest are good :)
+# we don't have any other bad points for this model either! only 3 that are 'ok' while the rest are good :)
 ```
 
 
@@ -361,7 +357,7 @@ loo_m1 <- loo(new_m1)
 loo_m1_ma <- loo(new_m1_ma)
 
 
-print(loo_compare(loo_m1, loo_m1_ma), digits = 3) #lepd: Difference in expected predictive accuracy. This test expects the model with the strict priors to have worse predicted accuracy than the model with the meta analysis priors.
+print(loo_compare(loo_m1, loo_m1_ma), digits = 3) #elpd: Difference in expected predictive accuracy. This test expects the model with the strict priors to have worse predicted accuracy than the model with the meta analysis priors.
 
 ```
 
@@ -374,4 +370,105 @@ summary(new_m1_ma)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r Step 4.2 - Defining the priors}
+# Meta analysis findings:
+#  - mean = -0.4329828
+#  - sd = 0.09012945
+#  - heterogeneity = 0.32
+
+# Defining the priors
+new_prior_ma_3 <- c(
+  prior(normal(0, 1), class = Intercept),
+  prior(normal(-0.4329828, 0.09012945), class = b),
+  prior(normal(0.32, 0.16), class = sd), # Using the heterogeneity prior, but making it broader, since we are analyzing heterogeneity between participants and we might expect it to be bigger, or in any case different (we are describing a different level of the structure).
+  prior(normal(1, 0.5), class = sigma),
+  prior(normal(2, 0.1), class = nu)
+)
+
+```
+
+```{r Step 4.3 - Prior predictive check}
+new_m_ma_prior3 <- brm(
+  new_f,
+  data = new_d,
+  family = student(),
+  prior = new_prior_ma_3,
+  sample_prior = "only", 
+  chains = 2,
+  cores = 2 
+)
+
+
+#Prior predictive check
+pp_check(new_m_ma_prior, nsamples = 40)
+pp_check(new_m_ma_prior3, nsamples = 40)
+```
+
+
+
+
+
+```{r Step 4.4 - Fitting the model}
+#Building our actual model:
+new_m1_ma3 <- brm(
+  new_f,
+  data = new_d,
+  family = student,
+  prior = new_prior_ma_3,
+  sample_prior = T,
+  chains = 2,
+  cores = 2
+)
+```
+
+```{r Step 4.5 - Checking the warnings}
+summary(new_m1_ma3)
+```
+
+```{r Step 4.6 - Checking the chains}
+plot(new_m1_ma3, N=1)
+
+
+
+
+
+```
+
+```{r Step 4.6 - Checking the predictions}
+pp_check(new_m1_ma3, nsamples = 100)
+```
+
+```{r Step 4.6 - Checking the posterior uodates}
+plot(hypothesis(new_m1_ma3, "DiagnosisTD>0"))
+
+post3 <- posterior_samples(new_m1_ma3)
+ggplot(post3) + 
+  geom_density(aes(prior_Intercept), fill = "red", alpha = 0.5)  +
+  geom_density(aes(b_Intercept), fill = "blue", alpha = 0.5)
+```
+
+```{r Step 4.7 - Checking for influential data points (LOO)}
+#  ?? Do we need to do that here - It is in the bayesian workflow but he doesn't specify it in this task ??
+
+loo(new_m1_ma3)
+plot(loo(new_m1_ma3))
+# we don't have any other bad points for this model either! only 2 that are 'ok' while the rest are good :)
+```
 
