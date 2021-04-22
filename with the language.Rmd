@@ -336,8 +336,8 @@ Step 5: Compare the models
 - Compare the two models (LOO)
 - Discuss how they compare and whether any of them is best.
 ```{r Step 5.1 - Plotting the priors and posteriors in both models (I think)}
-plot(hypothesis(new_m2, "DiagnosisTD>0"))
-plot(hypothesis(new_m2_ma, "DiagnosisTD>0"))
+plot(hypothesis(new_m1, "DiagnosisTD>0"))
+plot(hypothesis(new_m1_ma, "DiagnosisTD>0"))
 
 ```
 
@@ -369,9 +369,6 @@ print(loo_compare(loo_m1, loo_m1_ma), digits = 3) #lepd: Difference in expected 
 ```{r Comparing the model estimates}
 summary(new_m1)
 summary(new_m1_ma)
-
-summary(ma_m1)
-
 ```
 
 
