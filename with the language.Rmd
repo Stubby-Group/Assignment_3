@@ -316,6 +316,9 @@ plot(hypothesis(new_m1_ma, "DiagnosisTD>0")) #post learned from prior - prob mas
 ```{r Step 4.7 - Checking for influential data points (LOO)}
 #  ?? Do we need to do that here - It is in the bayesian workflow but he doesn't specify it in this task ??
 
+loo(new_m1_ma)
+plot(loo(new_m1_ma))
+# we don't have any other bad points for this model either! only 2 that are 'ok' while the rest are good :)
 ```
 
 
@@ -352,3 +355,4 @@ loo_model_weights(new_m1, new_m1_ma)
 print(loo_compare(loo1, loo2, loo3, loo4), digits = 3)
 
 
+```
