@@ -370,9 +370,4 @@ loo_m1_ma <- loo(new_m1_ma)
 
 print(loo_compare(loo_m1, loo_m1_ma), digits = 3) #lepd: Difference in expected predictive accuracy. This test expects the model with the strict priors to have worse predicted accuracy than the model with the meta analysis priors.
 
-loo_model_weights(new_m1, new_m1_ma)
-
-print(loo_compare(loo1, loo2, loo3, loo4), digits = 3)
-
-
 ```
