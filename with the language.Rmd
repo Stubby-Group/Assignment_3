@@ -203,7 +203,7 @@ summary(new_m1)
 
 ```{r Step 3.6 - Checking the chains}
 plot(new_m1, N=1)
-
+# The chains generally look good, they are even and well mixed. However, the plot for sd_Language_Intercept and sigma are a bit off, but they are not too bad.
 ```
 
 ```{r Step 3.6 - Checking the predictions}
