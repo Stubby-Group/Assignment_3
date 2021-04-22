@@ -235,7 +235,7 @@ ggplot(post) +
 
 ```{r Step 3.7 - Checking for influential data points (LOO)}
 #  ?? Do we need to do that here - It is in the bayesian workflow but he doesn't specify it in this task ??
-
+pacman::p_load(loo)
 loo(new_m1)
 plot(loo(new_m1))
 # We don't have any data points over the 0.7 Pareto k threshold, which is great, we only have 3 that are close, which is ok.
@@ -323,17 +323,10 @@ ggplot(post2) +
 
 ```{r Step 4.7 - Checking for influential data points (LOO)}
 #  ?? Do we need to do that here - It is in the bayesian workflow but he doesn't specify it in this task ??
-<<<<<<< HEAD
-
-=======
-<<<<<<< HEAD
 
 loo(new_m1_ma)
 plot(loo(new_m1_ma))
 # we don't have any other bad points for this model either! only 2 that are 'ok' while the rest are good :)
-=======
->>>>>>> 92af7362c3a9ba8bb97722937a3d42c7b55e9dbc
->>>>>>> 4d8447d687f646d18be7c8d5dd5af04d1f58f31b
 ```
 
 
@@ -362,7 +355,7 @@ ggplot(post) +
 ```
 
 ```{r Step 5.3 - Comparing the two models (LOO)}
-pacman::p_load(loo)
+
 
 loo_m1 <- loo(new_m1)
 loo_m1_ma <- loo(new_m1_ma)
