@@ -181,7 +181,6 @@ new_m_prior <- brm(
 pp_check(new_m_prior, nsamples = 25)
 
 pp_check(new_m_prior, nsamples = 40)
-#It is very hard to see, but the priors looks like it fits decently.
 ```
 
 ```{r Step 3.4 - Fitting the model}
@@ -203,7 +202,7 @@ summary(new_m1)
 
 ```{r Step 3.6 - Checking the chains}
 plot(new_m1, N=1)
-# The chains generally look good, they are even and well mixed. However, the plot for sd_Language_Intercept and sigma are a bit off, but they are not too bad.
+
 ```
 
 ```{r Step 3.6 - Checking the predictions}
@@ -235,7 +234,11 @@ ggplot(post) +
 ```
 
 ```{r Step 3.7 - Checking for influential data points (LOO)}
-#  ?? Do we need to do that here - It is in the bayesian workflowm but he doesn't specify it in this task ??
+#  ?? Do we need to do that here - It is in the bayesian workflow but he doesn't specify it in this task ??
+
+loo(new_m1)
+plot(loo(new_m1))
+# We don't have any data points over the 0.7 Pareto k threshold, which is great, we only have 3 that are close, which is ok.
 ```
 
 
@@ -314,16 +317,13 @@ plot(hypothesis(new_m1_ma, "DiagnosisTD>0"))
 
 post2 <- posterior_samples(new_m1_ma)
 ggplot(post2) + 
-  geom_density(aes(prior_b), fill = "red", alpha = 0.5)  +
-  geom_density(aes(b_DiagnosisTD), fill = "blue", alpha = 0.5)
-
-ggplot(post2) + 
   geom_density(aes(prior_Intercept), fill = "red", alpha = 0.5)  +
   geom_density(aes(b_Intercept), fill = "blue", alpha = 0.5)
 ```
 
 ```{r Step 4.7 - Checking for influential data points (LOO)}
 #  ?? Do we need to do that here - It is in the bayesian workflow but he doesn't specify it in this task ??
+
 ```
 
 
@@ -339,7 +339,16 @@ plot(hypothesis(new_m2_ma, "DiagnosisTD>0"))
 ```
 
 ```{r Step 5.2 - Comparing the posteriors between the two models}
+sub1 <- select(post, b_DiagnosisTD)
+sub2 <- select(post2, b_DiagnosisTD)
+post <- as.data.frame(cbind(post$b_DiagnosisTD, post2$b_DiagnosisTD))
+post$b_DiagnosisTD_strict <- post$b_DiagnosisTD
+post2$b_DiagnosisTD_ma <- post2$b_DiagnosisTD
 
+ggplot(post) + 
+  geom_density(aes(V1), fill = "red", alpha = 0.5)  +
+  geom_density(aes(V2), fill = "blue", alpha = 0.5) + 
+  
 ```
 
 ```{r Step 5.3 - Comparing the two models (LOO)}
