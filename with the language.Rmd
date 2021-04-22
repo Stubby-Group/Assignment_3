@@ -181,6 +181,8 @@ new_m_prior <- brm(
 pp_check(new_m_prior, nsamples = 25)
 
 pp_check(new_m_prior, nsamples = 40)
+#It is very hard to see, but the priors 
+looks like it fits decently.
 ```
 
 ```{r Step 3.4 - Fitting the model}
@@ -234,11 +236,7 @@ ggplot(post) +
 ```
 
 ```{r Step 3.7 - Checking for influential data points (LOO)}
-#  ?? Do we need to do that here - It is in the bayesian workflow but he doesn't specify it in this task ??
-
-loo(new_m1)
-plot(loo(new_m1))
-# We don't have any data points over the 0.7 Pareto k threshold, which is great, we only have 3 that are close, which is ok.
+#  ?? Do we need to do that here - It is in the bayesian workflowm but he doesn't specify it in this task ??
 ```
 
 
@@ -315,7 +313,6 @@ plot(hypothesis(new_m1_ma, "DiagnosisTD>0")) #post learned from prior - prob mas
 
 ```{r Step 4.7 - Checking for influential data points (LOO)}
 #  ?? Do we need to do that here - It is in the bayesian workflow but he doesn't specify it in this task ??
-
 ```
 
 
