@@ -181,8 +181,7 @@ new_m_prior <- brm(
 pp_check(new_m_prior, nsamples = 25)
 
 pp_check(new_m_prior, nsamples = 40)
-#It is very hard to see, but the priors 
-looks like it fits decently.
+#It is very hard to see, but the priors looks like it fits decently.
 ```
 
 ```{r Step 3.4 - Fitting the model}
