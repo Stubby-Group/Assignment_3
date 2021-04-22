@@ -181,6 +181,7 @@ new_m_prior <- brm(
 pp_check(new_m_prior, nsamples = 25)
 
 pp_check(new_m_prior, nsamples = 40)
+#It is very hard to see, but the priors looks like it fits decently.
 ```
 
 ```{r Step 3.4 - Fitting the model}
@@ -202,7 +203,7 @@ summary(new_m1)
 
 ```{r Step 3.6 - Checking the chains}
 plot(new_m1, N=1)
-
+# The chains generally look good, they are even and well mixed. However, the plot for sd_Language_Intercept and sigma are a bit off, but they are not too bad.
 ```
 
 ```{r Step 3.6 - Checking the predictions}
@@ -234,11 +235,7 @@ ggplot(post) +
 ```
 
 ```{r Step 3.7 - Checking for influential data points (LOO)}
-#  ?? Do we need to do that here - It is in the bayesian workflow but he doesn't specify it in this task ??
-
-loo(new_m1)
-plot(loo(new_m1))
-# We don't have any data points over the 0.7 Pareto k threshold, which is great, we only have 3 that are close, which is ok.
+#  ?? Do we need to do that here - It is in the bayesian workflowm but he doesn't specify it in this task ??
 ```
 
 
@@ -281,8 +278,11 @@ new_m_ma_prior <- brm(
 #Prior predictive check
 pp_check(new_m_ma_prior, nsamples = 25)
 pp_check(new_m_ma_prior, nsamples = 40)
-pp_check(new_m_ma_prior, nsamples = 100)
 ```
+
+
+
+
 
 ```{r Step 4.4 - Fitting the model}
 #Building our actual model:
@@ -310,15 +310,27 @@ pp_check(new_m1_ma, nsamples = 100)
 ```
 
 ```{r Step 4.6 - Checking the posterior uodates}
-plot(hypothesis(new_m1_ma, "DiagnosisTD>0")) #post learned from prior - prob mass under zero
+plot(hypothesis(new_m1_ma, "DiagnosisTD>0"))
+
+post2 <- posterior_samples(new_m1_ma)
+ggplot(post2) + 
+  geom_density(aes(prior_b), fill = "red", alpha = 0.5)  +
+  geom_density(aes(b_DiagnosisTD), fill = "blue", alpha = 0.5)
+
+ggplot(post2) + 
+  geom_density(aes(prior_Intercept), fill = "red", alpha = 0.5)  +
+  geom_density(aes(b_Intercept), fill = "blue", alpha = 0.5)
 ```
 
 ```{r Step 4.7 - Checking for influential data points (LOO)}
 #  ?? Do we need to do that here - It is in the bayesian workflow but he doesn't specify it in this task ??
+<<<<<<< HEAD
 
 loo(new_m1_ma)
 plot(loo(new_m1_ma))
 # we don't have any other bad points for this model either! only 2 that are 'ok' while the rest are good :)
+=======
+>>>>>>> 92af7362c3a9ba8bb97722937a3d42c7b55e9dbc
 ```
 
 
