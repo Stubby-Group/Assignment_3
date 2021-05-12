@@ -161,7 +161,7 @@ new_prior <- c(
   prior(normal(0, 0.1), class = b),
   prior(normal(0, 0.05), class = sd),
   prior(normal(1, 0.5), class = sigma),
-  prior(normal(2, 0.1), class = nu)
+  prior(gamma(2, 0.1), class = nu)
 )
 ```
 
@@ -257,7 +257,7 @@ new_prior_ma <- c(
   prior(normal(-0.4329828, 0.09012945), class = b),
   prior(normal(0.32, 0.16), class = sd), # Using the heterogeneity prior, but making it broader, since we are analyzing heterogeneity between participants and we might expect it to be bigger, or in any case different (we are describing a different level of the structure).
   prior(normal(1, 0.5), class = sigma),
-  prior(normal(2, 0.1), class = nu)
+  prior(gamma(2, 0.1), class = nu)
 )
 
 ```
@@ -332,6 +332,8 @@ Step 5: Compare the models
 - Compare the two models (LOO)
 - Discuss how they compare and whether any of them is best.
 ```{r Step 5.1 - Plotting the priors and posteriors in both models (I think)}
+color_scheme_set("viridisC")
+
 plot(hypothesis(new_m1, "DiagnosisTD>0"))
 plot(hypothesis(new_m1_ma, "DiagnosisTD>0"))
 
@@ -399,7 +401,7 @@ new_prior_ma_3 <- c(
   prior(normal(-0.4329828, 0.09012945), class = b),
   prior(normal(0.32, 0.16), class = sd), # Using the heterogeneity prior, but making it broader, since we are analyzing heterogeneity between participants and we might expect it to be bigger, or in any case different (we are describing a different level of the structure).
   prior(normal(1, 0.5), class = sigma),
-  prior(normal(2, 0.1), class = nu)
+  prior(gamma(2, 0.1), class = nu)
 )
 
 ```
